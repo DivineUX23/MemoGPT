@@ -464,3 +464,11 @@ def delete_chat(Audio_id: int, db: Session= Depends(get_db)):
 
     return {'message': status.HTTP_200_OK, 'detail': f'{Audio_id} deleted'}
 
+
+
+#List of all chats
+
+@app.get("/all_chats/")
+def all_chats(db:Session= Depends(get_db)):
+    results = db.query(Summary.Audio_id, Summary.title).all()
+    return [{'id': id, 'Title': title} for (id, title) in results]
