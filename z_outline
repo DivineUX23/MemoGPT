@@ -1,0 +1,19 @@
+from fastapi import FastAPI
+
+#sign up
+
+#login
+
+#input audio file
+
+#Wisper API opens generates the transcript  and stores it
+
+
+#LOOPED per users input text-----------------------------
+                                                        
+#user sends text input
+
+#Text input and transcript are sent to chatgpt API
+
+#Chatgpt's response is sent to the user.
+#--------------------------------------------------------
