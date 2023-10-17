@@ -1,5 +1,4 @@
 from sqlalchemy import Text, Column, ForeignKey, Integer, String, LargeBinary, DateTime, JSON
-
 from database.db import Base
 from sqlalchemy.orm import Relationship
 from datetime import datetime
@@ -7,7 +6,7 @@ from datetime import datetime
 class Audio(Base):
     __tablename__ = "audio"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    transcript = Column(Text)
+    transcript = Column(JSON)
     date_created = Column(DateTime, default=datetime.utcnow())
     data = Column(LargeBinary)
     summaries = Relationship("Summary", cascade="all, delete-orphan")

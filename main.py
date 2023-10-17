@@ -143,7 +143,7 @@ def reply(audio: str, db: Session = Depends(get_db)):
         api_request_json = {
             "model": "llama-13b-chat",
             "messages": [
-                {"role": "system", "content": f"Based solely on the transcript {audio}, summarize the content in a straightforward and concise manner, focusing only on relevant details from the transcript. Do not include any additional information, greetings, or irrelevant specifics. Ensure the summary directly addresses the core topics discussed in the transcript."},
+                {"role": "system", "content": f"Based solely on the transcript {audio}, which contains sentence timestamps, speakers, and text, summarize the content in a straightforward and concise manner. Include timestamps in the summary to reference where details are derived from the transcript. Focus only on using relevant details from the transcript in the summary. Do not include any additional information, greetings, or irrelevant specifics. Ensure the summary directly addresses the core topics discussed in the transcript."},
             ]
         }
         
@@ -298,7 +298,22 @@ def get_transcript(file, db: Session = Depends(get_db)):
             print(transcript_id)
 
             if transcription_result['status'] == 'completed':
-                print(transcription_result['text'])
+                #print(transcription_result['text'])
+                        
+                sentences_endpoint = f"https://api.assemblyai.com/v2/transcript/{response.json()['id']}/sentences"
+                sentences_result = requests.get(sentences_endpoint, headers=headers).json()
+                utterances = sentences_result["sentences"]
+                extracted_data = []
+
+                for utterance in utterances:
+                    data = {
+                        "start": utterance["start"],
+                        "end": utterance["end"],
+                        "speaker": utterance["speaker"],
+                        "text": utterance["text"]
+                    }
+                    extracted_data.append(data)
+                print(extracted_data)
                 break
 
             elif transcription_result['status'] == 'error':
@@ -309,13 +324,13 @@ def get_transcript(file, db: Session = Depends(get_db)):
 
     finally:
    
-        print(f"TRANSCRIPT_DATA: {transcription_result['text']}") 
+        print(f"TRANSCRIPT_DATA: {extracted_data}") 
 
-        transcripted.append(transcription_result['text'])
+        transcripted.append(extracted_data)
 
-        summary_data = reply(transcription_result['text'], db)
+        summary_data = reply(extracted_data, db)
 
-        transcription_result = transcription_result['text']
+        transcription_result = extracted_data
         
         return (transcription_result, summary_data)
 
@@ -343,8 +358,9 @@ def conversations(input: str, audio: str, history: str, db: Session = Depends(ge
 
     while True:
 
-        prompt=f"Based exclusively on the information within the transcript {audio}, provide an answer to the following question: {input}. Your response should be derived solely from the transcript."
-        messages = f"Utilize the JSON object {history}, which contains your past interactions with me, to ensure continuity in the conversation while prioritizing responses to the current question posed in {prompt}."
+        #prompt=f"Based exclusively on the information within the transcript {audio}, provide an answer to the following question: {input}. Your response should be derived solely from the transcript."
+        prompt=f"Based solely on the information within the transcript {audio}, which contains sentence timestamps, speakers, and text, provide an answer to the question: {input}. Derive the response exclusively from the transcript. Include timestamps in the answer to reference where details are sourced from the transcript. Do not include any greetings. Ensure the answer is focused on relevant details from the transcript that directly address the question."
+        messages = f"Utilize the JSON object {history}, which contains your past interactions with me, to ensure continuity in the conversation while responding ony to the current question posed in {prompt}.  Do not repeat users questions, Just answer it straight to the point."
         history["message"].append({"User question": {input}})
         
         message = [
@@ -368,12 +384,13 @@ def conversations(input: str, audio: str, history: str, db: Session = Depends(ge
         llama2 = response_data['choices'][0]['message']['content']
 
         #Debugger:
-        print(llama2)
+        print(f"\n\n-----Test--------: {llama2}\n\n")
 
         history["message"].append({"Your answer": {llama2}})
-        
+        #history["message"].append({History})
+
         #Debugger:
-        print(F"History: {history}")
+        print(f"History: {history}")
 
         return (llama2, history)
 
