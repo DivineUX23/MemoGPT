@@ -16,11 +16,16 @@ import pyaudio
 import wave
 from decouple import config
 
+import nltk
+from nltk.tokenize import sent_tokenize, word_tokenize
+
 
 app = FastAPI()
 
 llama = LlamaAPI(config('LlamaAPI'))
 YOUR_API_TOKEN = config("AssemblyAI")
+
+nltk.download('punkt')
 
 transcripted = []
 Audio_video = None
@@ -143,8 +148,13 @@ def reply(audio: str, db: Session = Depends(get_db)):
         api_request_json = {
             "model": "llama-13b-chat",
             "messages": [
-                {"role": "system", "content": f"Based solely on the transcript {audio}, which contains sentence timestamps, speakers, and text, summarize the content in a straightforward and concise manner. Include timestamps in the summary to reference where details are derived from the transcript. Focus only on using relevant details from the transcript in the summary. Do not include any additional information, greetings, or irrelevant specifics. Ensure the summary directly addresses the core topics discussed in the transcript."},
-            ]
+                {"role": "system", "content": f"Based solely on the transcript {audio}, which contains sentence timestamps, speakers, and text, summarize the content in a straightforward and concise manner. Include timestamps in the summary to reference where details are derived from the transcript. Focus only on using relevant details from the transcript in the summary. Do not include any additional information, greetings, or irrelevant specifics. Ensure the summary directly addresses the core topics discussed in the transcript. Summary:"},
+            ],
+            #"max_tokens": 128,
+            "temperature": 0.3,
+            #"top_p": 0.7,
+            #"top_k": 50,
+            "repetition_penalty": 1
         }
         
     except llama.exceptions.Error as e:
@@ -161,29 +171,21 @@ def reply(audio: str, db: Session = Depends(get_db)):
     api_request_json = {
         "model": "llama-13b-chat",
         "messages": [
-            {"role": "system", "content": f"Provide a single-phrase or single-word title that accurately captures the main theme or subject of the summary {summary}. Ensure the response consists only of the title, without any additional text or explanation."},
-        ]
+            {"role": "system", "content": f"Provide a single-phrase or single-word title that accurately captures the main theme or subject of this summary: {summary}. Ensure the response consists only of the title, without any additional text or explanation. Title: "},
+        ],
+        #"max_tokens": 128,
+        "temperature": 0.1,
+        #"top_p": 0.7,
+        #"top_k": 50,
+        #"repetition_penalty": 1
     }
     response = llama.run(api_request_json)
     
     print(json.dumps(response.json(), indent=2))
-
     response_data = response.json()
     tittle = response_data['choices'][0]['message']['content']
-    
-    audio_id = db.query(func.max(Audio.id)).scalar()
-
-    Summarized = Summary(
-        Audio_id = audio_id,
-        title = tittle,
-        summary = summary
-    )
-    db.add(Summarized)
-    db.commit()
-
-    return {'Audio_id': Summarized.Audio_id,
-            'title': Summarized.title,
-            'summary': Summarized.summary}
+        
+    return (tittle, summary)
 
 
 
@@ -327,13 +329,84 @@ def get_transcript(file, db: Session = Depends(get_db)):
         print(f"TRANSCRIPT_DATA: {extracted_data}") 
 
         transcripted.append(extracted_data)
-
-        summary_data = reply(extracted_data, db)
-
-        transcription_result = extracted_data
         
+        # Convert JSON to string if necessary
+        extracted_data = json.dumps(extracted_data)
+        print(f"THIS THE ONE IN LOOP{extracted_data}")
+
+
+        if len(word_tokenize(extracted_data)) > 3000:
+
+            #get the summary chuck by chuck:
+
+            chunks = tokenizer(extracted_data)
+
+            responses = []
+            for chunk in chunks:
+                tittle, summary = reply(chunk, db)
+
+                print(f"TOKEN LENT OF CHUNK = \n\n{len(word_tokenize(str(summary)))}\n\n\n")
+
+                responses.append(summary)
+
+            joined_response = ' '.join(responses)
+            tittle, summary = reply(joined_response, db)
+
+            print(f"final response bove 4000 = {summary}\n")
+
+        else:
+            tittle, summary = reply(extracted_data, db)
+        
+        audio_id = db.query(func.max(Audio.id)).scalar()
+
+        Summarized = Summary(
+            Audio_id = audio_id,
+            title = tittle,
+            summary = summary
+        )
+        db.add(Summarized)
+        db.commit()
+
+        summary_data = {'Audio_id': Summarized.Audio_id,
+                'title': Summarized.title,
+                'summary': Summarized.summary}
+        
+        transcription_result = extracted_data
+
         return (transcription_result, summary_data)
 
+
+
+#Tokenizing Transcript to fit LLama
+def tokenizer(extracted_data: str):
+
+    if isinstance(extracted_data, dict):
+        extracted_data = json.dumps(extracted_data)
+
+    print("Token count more = ", len(word_tokenize(extracted_data)))
+
+    chunk_size = 3000
+    chucks = []
+    sentences = sent_tokenize(extracted_data)
+    current_chunk = ""
+
+    for sentence in sentences:
+        tokens = nltk.word_tokenize(sentence)
+
+        if len(current_chunk.split()) + len(tokens) <= chunk_size:
+            current_chunk += "" + sentence
+
+        else:
+            chucks.append(current_chunk.strip())
+            current_chunk = sentence
+
+        print(f"TOKEN LENT OF unsent CHUNK = \n\n{len(word_tokenize(str(current_chunk.strip())))}\n\n\n")
+
+    if current_chunk:
+        chucks.append(current_chunk.strip())
+       
+    print(chucks)
+    return chucks
 
 
 #Conversation Endpoint:
@@ -343,8 +416,41 @@ histories = {"message":[]}
 def conversation(input: str, db: Session = Depends(get_db)):
 
     audio = transcripted
+    print(audio)
+    print(f"Transcript{transcripted}")
 
-    llama2, history = conversations(input, audio, histories, db)
+    extracted_data = json.dumps(audio)
+    print(f"THIS THE ONE IN LOOP{extracted_data}")
+
+    #print(f"THIS THE ONE noooot IN LOOP{extracted_data}")
+
+    if len(word_tokenize(extracted_data)) > 3000:
+
+        #get the summary chuck by chuck:
+
+        chunks = tokenizer(extracted_data)
+
+        responses = []
+        for chunk in chunks:
+            #global histories
+            histories = {"message":[]}
+
+            llama2, historing = conversations(input, chunk, histories, db)
+         
+            print(f"deleted history = \n{histories}\n")
+
+            print(f"TOKEN LENT OF CHUNK = \n\n{len(word_tokenize(str(llama2)))}\n\n\n")
+
+            responses.append(llama2)
+
+        print(f"deleted history 2nd = \n\n{histories}\n")
+        
+        joined_response = ' '.join(responses)
+        llama2, history = conversations(input, joined_response, histories, db)
+        print(f"final response bove 4000 = \n\n{llama2}\n")
+
+    else:
+        llama2, history = conversations(input, audio, histories, db)
 
     db_history = storing_history(history, db)
 
@@ -358,11 +464,16 @@ def conversations(input: str, audio: str, history: str, db: Session = Depends(ge
 
     while True:
 
-        #prompt=f"Based exclusively on the information within the transcript {audio}, provide an answer to the following question: {input}. Your response should be derived solely from the transcript."
-        prompt=f"Based solely on the information within the transcript {audio}, which contains sentence timestamps, speakers, and text, provide an answer to the question: {input}. Derive the response exclusively from the transcript. Include timestamps in the answer to reference where details are sourced from the transcript. Do not include any greetings. Ensure the answer is focused on relevant details from the transcript that directly address the question."
-        messages = f"Utilize the JSON object {history}, which contains your past interactions with me, to ensure continuity in the conversation while responding ony to the current question posed in {prompt}.  Do not repeat users questions, Just answer it straight to the point."
         history["message"].append({"User question": {input}})
-        
+        messages = f"""The following is a conversation with an AI research assistant. The assistant answers should be easy to understand even by primary school students {history}.
+
+            As the AI research assistant, Answer the question based on the context below, which contains sentence timestamps, speakers, and text, provide an answer to the question. Keep the answer short and concise. Include timestamps in the answer to reference where details are sourced from the context. Do not include any greetings. Ensure the answer is focused on relevant details from the transcript that directly address the question. Respond "Unsure about answer" if not sure about the answer.
+
+            Context: {audio}.
+
+            Human: {input}
+            AI: 
+        """
         message = [
                     {"role": "system", "content": f"Deliver precise and concise responses without greetings or irrelevant details, ensuring that the answers are accurate and directly address the user's questions."},
                     {"role": "user", "content": messages},
@@ -407,6 +518,7 @@ def storing_history(history, db: Session = Depends(get_db)):
             return super().default(obj)
 
     history_json = json.dumps(history, indent=2, cls=SetEncoder)
+    print(f"History--------------------: {history_json}")
 
     number = db.query(func.max(Audio.id)).scalar()
 
@@ -420,14 +532,15 @@ def storing_history(history, db: Session = Depends(get_db)):
         db.add(history_transcript)
         db.commit()
 
-    record.chat_response = history_json
-    db.commit()
+    else:
+        record.chat_response = history_json
+        db.commit()
     
-    #Debugger:
-    print(f"BABAD THIS FROM THE DB: {record.chat_response}")
+        #Debugger:
+        print(f"BABAD THIS FROM THE DB: {record.chat_response}")
 
-    return {'Audio_id': number,
-            'Conversation': record.chat_response}    
+        return {'Audio_id': number,
+                'Conversation': record.chat_response}    
 
 
 
@@ -449,7 +562,34 @@ def continue_chat(Audio_id: int, input: str, db: Session= Depends(get_db)):
 
     raw_history = json.loads(record.chat_response)
 
-    llama2, history = conversations(input, Audio_no.transcript, raw_history, db)
+
+    extracted_data = json.dumps(Audio_no.transcript)
+    print(f"THIS THE ONE IN LOOP{extracted_data}")
+
+
+    if len(word_tokenize(extracted_data)) > 3000:
+
+        chunks = tokenizer(extracted_data)
+
+        responses = []
+
+        for chunk in chunks:
+            histories = {"message":[]}
+
+            llama2, history = conversations(input, chunk, histories, db)
+            
+            responses.append(llama2)
+
+        #print(f"deleted history 2nd = \n\n{histories}\n")
+        
+        joined_response = ' '.join(responses)
+        
+        llama2, history = conversations(input, joined_response, raw_history, db)
+
+        print(f"final response bove 4000 = \n\n{llama2}\n")
+
+    else:
+        llama2, history = conversations(input, Audio_no.transcript, raw_history, db)
 
     class SetEncoder(json.JSONEncoder):
         def default(self, obj):
