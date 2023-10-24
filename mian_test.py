@@ -241,7 +241,9 @@ def conversations(input: str, audio: str, history: str, db: Session = Depends(ge
 
         prompt=f"Based exclusively on the information within the transcript {audio}, provide an answer to the following question: {input}. Your response should be derived solely from the transcript."
         messages = f"Utilize the JSON object {history}, which contains your past interactions with me, to ensure continuity in the conversation while prioritizing responses to the current question posed in {prompt}."
-        history["message"].append({"User question": {input}})
+        #history["message"].append({"User question": {input}})
+        history["message"].append({"role": "user", "content": input})
+
         
         message = [
                     {"role": "system", "content": f"Deliver precise and concise responses without greetings or irrelevant details, ensuring that the answers are accurate and directly address the user's questions."},
@@ -268,6 +270,8 @@ def conversations(input: str, audio: str, history: str, db: Session = Depends(ge
         print(llama2)
 
         history["message"].append({"Your answer": {llama2}})
+        history["message"].append({"role": "assistant", "content": llama2})
+
         
         print(F"History: {history}")
 

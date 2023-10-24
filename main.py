@@ -32,20 +32,26 @@ Audio_video = None
 
 
 #Testing:
-
+histories = {"message":[]}
 @app.get("/")
-def read_root(db: Session = Depends(get_db)):
+def read_root(input: str, db: Session = Depends(get_db)):
     
-    number = db.query(func.max(Audio.id)).scalar()
+    #number = db.query(func.max(Audio.id)).scalar()
     
     #Debuggers:
-    #text="We currently believe that the universe has been around for roughly 13.8 billion years. This estimation is based on a variety of data, including measurements of cosmic microwave background radiation left over from the Big Bang and observations of the rate at which galaxies are moving away from each other. Interestingly. To give a bit more color. While the matter and energy that make up the universe have been around for about 13.8 billion years, the universe itself as a concept may be much older or indeed timeless, depending on different interpretations of quantum gravity and string theories. And a little more info for the curious mind. Even though the universe is about 13.8 billion years old, we can see light from objects that are more than 13.8 billion light years away due to the constant expansion of the universe. Isn't that fascinating? In smile."
-    #transcripted.append(text)
-    Audio_no = db.query(Audio).filter(Audio.id == number).first()
-    TEST = db.query(Audio).filter(Audio.transcript == Audio_no.transcript).first()
-    print(TEST.transcript)
+    audio="We currently believe that the universe has been around for roughly 13.8 billion years. This estimation is based on a variety of data, including measurements of cosmic microwave background radiation left over from the Big Bang and observations of the rate at which galaxies are moving away from each other. Interestingly. To give a bit more color. While the matter and energy that make up the universe have been around for about 13.8 billion years, the universe itself as a concept may be much older or indeed timeless, depending on different interpretations of quantum gravity and string theories. And a little more info for the curious mind. Even though the universe is about 13.8 billion years old, we can see light from objects that are more than 13.8 billion light years away due to the constant expansion of the universe. Isn't that fascinating? In smile."
+    
+    #llama2, history = conversations(input, audio, histories, db)
 
-    return {"Message": number, "TEST": TEST.transcript}
+    #db_history = storing_history(history, db)
+
+    #return {'message': status.HTTP_200_OK, 'llama2': llama2, "Conversation": db_history}
+    #transcripted.append(text)
+    #Audio_no = db.query(Audio).filter(Audio.id == number).first()
+    #TEST = db.query(Audio).filter(Audio.transcript == Audio_no.transcript).first()
+    #print(TEST.transcript)
+
+    return {"Message": "Debugger page"}
 
 
 
@@ -139,7 +145,7 @@ def stop_recording(db: Session = Depends(get_db)):
 
 
 
-#Generate summary:
+#Generate summary and title:
 
 def reply(audio: str, db: Session = Depends(get_db)):
 
@@ -148,13 +154,22 @@ def reply(audio: str, db: Session = Depends(get_db)):
         api_request_json = {
             "model": "llama-13b-chat",
             "messages": [
-                {"role": "system", "content": f"Based solely on the transcript {audio}, which contains sentence timestamps, speakers, and text, summarize the content in a straightforward and concise manner. Include timestamps in the summary to reference where details are derived from the transcript. Focus only on using relevant details from the transcript in the summary. Do not include any additional information, greetings, or irrelevant specifics. Ensure the summary directly addresses the core topics discussed in the transcript. Summary:"},
+            {"role": "system", "content": f"""System: Based solely on this transcript: {audio} which contains sentence timestamps, speakers, and text, do the following:\
+            - Provide a short summary of the key points. Include timestamps in the summary to reference where details are derived from the transcript. Ensure the summary directly addresses the core topics discussed in the transcript.\
+            - Provide a single-phrase or single-word title that accurately captures the main theme or subject of the transcript.\
+
+            User: Provide your answer in JSON format with the following keys: title, summary.\
+
+            System: If the transcript is empty then simply write "No transcript provided."\
+
+            Example 1:
+            Transcript: "Hi, this is John from XYZ company. I'm calling to follow up on your order of 100 widgets. We have shipped your order today and you should receive it by next week. Please let me know if you have any questions or concerns."\
+            "title": "Order Confirmation", \n\n\
+            "summary": "John from XYZ company called to follow up on an order of 100 widgets. (0-10)\n The order was shipped today and expected to arrive by next week. (11-19)"\
+            """}
             ],
-            #"max_tokens": 128,
-            "temperature": 0.3,
-            #"top_p": 0.7,
-            #"top_k": 50,
-            "repetition_penalty": 1
+
+            "temperature": 0,
         }
         
     except llama.exceptions.Error as e:
@@ -165,25 +180,9 @@ def reply(audio: str, db: Session = Depends(get_db)):
     print(json.dumps(response.json(), indent=2))
 
     response_data = response.json()
-    summary = response_data['choices'][0]['message']['content']
 
-    #Creating a titile:    
-    api_request_json = {
-        "model": "llama-13b-chat",
-        "messages": [
-            {"role": "system", "content": f"Provide a single-phrase or single-word title that accurately captures the main theme or subject of this summary: {summary}. Ensure the response consists only of the title, without any additional text or explanation. Title: "},
-        ],
-        #"max_tokens": 128,
-        "temperature": 0.1,
-        #"top_p": 0.7,
-        #"top_k": 50,
-        #"repetition_penalty": 1
-    }
-    response = llama.run(api_request_json)
-    
-    print(json.dumps(response.json(), indent=2))
-    response_data = response.json()
-    tittle = response_data['choices'][0]['message']['content']
+    summary = response_data['choices'][0]['message']['content'].split('\n\n')[1]
+    tittle = response_data['choices'][0]['message']['content'].split('\n\n')[0].split(': ')[1]
         
     return (tittle, summary)
 
@@ -414,6 +413,7 @@ def tokenizer(extracted_data: str):
 histories = {"message":[]}
 @app.post("/response/")
 def conversation(input: str, db: Session = Depends(get_db)):
+    global histories
 
     audio = transcripted
     print(audio)
@@ -457,53 +457,43 @@ def conversation(input: str, db: Session = Depends(get_db)):
     return {'message': status.HTTP_200_OK, 'llama2': llama2, "Conversation": db_history}
 
 
+def conversations(input: str, audio: str, messages: str, db: Session = Depends(get_db)):
 
-#Conversation 
+    prompt=f"""Based exclusively on the information within the transcript of an audio file delimited by triple backticks below, which contains sentence timestamps, speakers, and text, provide an answer to the question, provide an answer to the following question: {input}. Your response should be derived solely from the transcript. Include timestamps in the answer to reference where details are sourced from the Transcript.
 
-def conversations(input: str, audio: str, history: str, db: Session = Depends(get_db)):
+    Transcript: ```{audio}```"""
 
-    while True:
+    messaging = f"Utilize this JSON object :{messages}, which contains your past interactions with me, to ensure continuity in the conversation while prioritizing responses to the current question delimited by the tripple hash ###{prompt}###."
 
-        history["message"].append({"User question": {input}})
-        messages = f"""The following is a conversation with an AI research assistant. The assistant answers should be easy to understand even by primary school students {history}.
+    messages["message"].append({"role": "user", "content": input})
 
-            As the AI research assistant, Answer the question based on the context below, which contains sentence timestamps, speakers, and text, provide an answer to the question. Keep the answer short and concise. Include timestamps in the answer to reference where details are sourced from the context. Do not include any greetings. Ensure the answer is focused on relevant details from the transcript that directly address the question. Respond "Unsure about answer" if not sure about the answer.
 
-            Context: {audio}.
+    message = [
+                {"role": "system", "content": f"Deliver precise and concise responses without greetings or irrelevant details, ensuring that the answers are accurate and directly address the user's questions."},
+                {"role": "user", "content": messaging},
+            ]
 
-            Human: {input}
-            AI: 
-        """
-        message = [
-                    {"role": "system", "content": f"Deliver precise and concise responses without greetings or irrelevant details, ensuring that the answers are accurate and directly address the user's questions."},
-                    {"role": "user", "content": messages},
-                ]
 
-        # API Request JSON Cell
-        try:
-            api_request_json = {
-                "model": "llama-13b-chat",
-                "messages": message
-            }
+
+    if input:
+        api_request_json = {
+            "model": "llama-13b-chat",
+            "messages": message,
+            "temperature": 0
+
+        }
             
-        except llama.exceptions.Error as e:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"llama-13b-chat failed: {str(e)}")    
-
         response = llama.run(api_request_json)
 
         response_data = response.json()
         llama2 = response_data['choices'][0]['message']['content']
+        messages["message"].append({"role": "assistant", "content": llama2})
 
-        #Debugger:
-        print(f"\n\n-----Test--------: {llama2}\n\n")
+        return llama2, messages
+    
+    else:
 
-        history["message"].append({"Your answer": {llama2}})
-        #history["message"].append({History})
-
-        #Debugger:
-        print(f"History: {history}")
-
-        return (llama2, history)
+        return {'message': status.HTTP_204_NO_CONTENT, "Detail": "Shouldn't be empty"}
 
 
 
