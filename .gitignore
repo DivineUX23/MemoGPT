@@ -1,2 +1,9 @@
 .env
 __pycache__
+Z_outline
+main_testing.py
+prompts.py
+requirements.txt
+/__pycache__
+__pycache__/
+/api/__pycache__
