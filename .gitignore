@@ -1,6 +1,6 @@
 .env
 __pycache__
-Z_outline
+z_outline
 main_testing.py
 prompts.py
 requirements.txt
