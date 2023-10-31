@@ -7,7 +7,11 @@ from decouple import config
 
 from services.llama_services import conversation
 
-app = APIRouter(tags = ["Llama"])
+import oauth
+
+app = APIRouter(tags = ["Llama"],
+                dependencies=[Depends(oauth.get_current_user)]
+)
 
 
 llama = LlamaAPI(config('LlamaAPI'))

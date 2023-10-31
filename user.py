@@ -8,6 +8,9 @@ from schema.users_shema import show_user
 from hashing import hash
 import services.user_services
 
+from schema.users_shema import user
+import oauth
+
 app = APIRouter(tags= ["User"])
 
 
@@ -21,16 +24,16 @@ async def sign_up(user: user, db: Session = Depends(get_db)):
 
 
 @app.put("/update_data")
-async def update(id: int, user: show_user, db: Session = Depends(get_db)):
+async def update(user: show_user, db: Session = Depends(get_db), current_user: user = Depends(oauth.get_current_user)):
 
-    updating = services.user_services.update(id=id, user=user, db=db)
+    updating = services.user_services.update(current_user=current_user, user=user, db=db)
 
     return {'message': status.HTTP_201_CREATED, 'detail': updating}
 
 
 @app.delete("/delete_account")
-async def update(id: int, db: Session = Depends(get_db)):
+async def update(db: Session = Depends(get_db), current_user: user = Depends(oauth.get_current_user)):
 
-    deleting = services.user_services.delete(id=id, db=db)
+    deleting = services.user_services.delete(current_user=current_user, db=db)
 
     return {'message': status.HTTP_201_CREATED, 'detail': deleting}

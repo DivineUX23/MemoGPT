@@ -9,3 +9,20 @@ class user(BaseModel):
 class show_user(BaseModel):
     name: str
     email: str
+    
+    class Config:
+        from_attributes = True
+
+class login(BaseModel):
+    email: str
+    password: str
+
+    class Config:
+        from_attributes = True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    email: str | None = None

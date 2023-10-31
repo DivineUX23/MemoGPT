@@ -5,8 +5,11 @@ from database.db import get_db
 
 import services.history_services
 
+import oauth
 
-app = APIRouter(tags = ["History"])
+
+app = APIRouter(tags = ["History"],
+                dependencies=[Depends(oauth.get_current_user)])
 
 
 #Continue Conversation:

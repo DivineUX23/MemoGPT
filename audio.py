@@ -4,9 +4,12 @@ from fastapi import UploadFile, File,status, Depends, APIRouter
 from database.db import get_db
 
 import services.audio_services
+import oauth
 
 
-app = APIRouter(tags = ["Audio"])
+
+app = APIRouter(tags = ["Audio"],
+                dependencies=[Depends(oauth.get_current_user)])
 
 #Recording audio:
 

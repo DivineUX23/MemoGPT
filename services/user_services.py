@@ -6,6 +6,9 @@ from model.users_model import User
 from schema.users_shema import user
 from hashing import hash
 
+from schema.users_shema import user
+import oauth
+
 
 def sign_up(user: str, db: Session = Depends(get_db)):
 
@@ -18,9 +21,9 @@ def sign_up(user: str, db: Session = Depends(get_db)):
     return new_users
 
 
-def update(id: int, user: str, db: Session = Depends(get_db)):
+def update(user: str, db: Session = Depends(get_db), current_user: user = Depends(oauth.get_current_user)):
 
-    updating = db.query(User).filter(id == User.id).first()
+    updating = db.query(User).filter(current_user.id == User.id).first()
 
     if not updating:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Hate to say but {id} does not exist")
@@ -32,13 +35,15 @@ def update(id: int, user: str, db: Session = Depends(get_db)):
     return "udated succefully"
 
 
-def delete(id: int, db: Session = Depends(get_db)):
+def delete(db: Session = Depends(get_db), current_user: user = Depends(oauth.get_current_user)):
         
-    deleting = db.query(User).filter(id == User.id)
+    #deleting = db.query(User).filter(current_user.id == User.id)
 
-    if not deleting:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Hate to say but {id} does not exist")
-    deleting.delete(sychronize_session = False)
+    #if not deleting:
+        #raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Hate to say but {id} does not exist")
+    #deleting.delete(sychronize_session = False)
+    #current_user.delete(sychronize_session = False)
+    db.delete(current_user)
     db.commit()
 
     return "Your account is deleted succefully"
