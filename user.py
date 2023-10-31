@@ -17,3 +17,20 @@ async def sign_up(user: user, db: Session = Depends(get_db)):
     new_users = services.user_services.sign_up(user=user, db=db)
 
     return {'message': status.HTTP_201_CREATED, 'detail': show_user.from_orm(new_users)}
+
+
+
+@app.put("/update_data")
+async def update(id: int, user: show_user, db: Session = Depends(get_db)):
+
+    updating = services.user_services.update(id=id, user=user, db=db)
+
+    return {'message': status.HTTP_201_CREATED, 'detail': updating}
+
+
+@app.delete("/delete_account")
+async def update(id: int, db: Session = Depends(get_db)):
+
+    deleting = services.user_services.delete(id=id, db=db)
+
+    return {'message': status.HTTP_201_CREATED, 'detail': deleting}

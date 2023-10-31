@@ -8,17 +8,17 @@ from model.user_model import Audio
 from sqlalchemy import func
 #===========================
 
+from user import app as user
 from audio import app as audio
 from llama import app as llama
 from history import app as history
-from user import app as user
 
 app = FastAPI()
 
+app.include_router(user, tags=["User"])
 app.include_router(audio, tags=["Audio"])
 app.include_router(llama, tags=["Llama"])
 app.include_router(history, tags=["History"])
-app.include_router(user, tags=["User"])
 
 
 #Testing:
