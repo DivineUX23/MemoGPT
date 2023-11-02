@@ -18,6 +18,10 @@ from decouple import config
 from services.assemblyai_services import get_transcript
 from services.history_services import Audio_numbering
 
+from schema.users_shema import user
+import oauth
+
+
 #Recording audio:
 
 Audio_video = None
@@ -54,7 +58,7 @@ def start_recording():
     return  "Recording..."
 
 
-def stop_recording(db: Session):
+def stop_recording(db: Session, current_user: user = Depends(oauth.get_current_user)):
     global recording_thread, is_recording, frames
     global Audio_video
     try:
@@ -85,14 +89,19 @@ def stop_recording(db: Session):
             filename=random_file_name_with_extension
         )
             
-        transcription_result, summary_data = get_transcript(file, db)
+        transcription_result, summary_data = get_transcript(file, db, current_user)
         
         #Debugger:
         print(f"TRANSCRIPT: {transcription_result}") 
         print(f"SUMMARY: {summary_data}") 
 
-        audio = Audio(data=audio_data,
-                    transcript = transcription_result)
+        user_id = current_user.id
+
+        audio = Audio(
+            User_id = user_id,
+            data=audio_data,
+            transcript = transcription_result
+            )
 
         db.add(audio)
         db.commit()
@@ -116,7 +125,7 @@ def stop_recording(db: Session):
 
 #uplaod an audio file:
 
-async def upload_audio( db: Session, file: UploadFile = File(...)):
+async def upload_audio( db: Session, file: UploadFile = File(...), current_user: user = Depends(oauth.get_current_user)):
 
     global Audio_video
 
@@ -141,11 +150,17 @@ async def upload_audio( db: Session, file: UploadFile = File(...)):
         file=BytesIO(audio_data),
         filename=temp_file_path
     )
+        
+    transcription_result, summary_data = get_transcript(file, db, current_user)
 
-    transcription_result, summary_data = get_transcript(file, db)
+    user_id = current_user.id
 
-    audio = Audio(data=audio_data,
-                transcript = transcription_result)
+    audio = Audio(
+            User_id = user_id,
+            data=audio_data,
+            transcript = transcription_result
+            )
+    
     db.add(audio)
     db.commit()
 
@@ -171,6 +186,8 @@ def play_audio(db: Session):
     if Audio_video is None:
         
         Audio_video = Audio_numbering()
+        
+        print(f"AUDIO_TEST_RESPONSE{Audio_video}")
 
         Audio_no = db.query(Audio).filter(Audio.id == Audio_video).first()
         number=Audio_no.data
@@ -184,5 +201,7 @@ def play_audio(db: Session):
     #Debugger:
     print(f"AUDIO_RESPONSE{Audio_video}")
 
-    return StreamingResponse(audio_data, media_type="audio/wav")
+    #return StreamingResponse(audio_data, media_type="audio/wav")
+    return audio_data
+
 

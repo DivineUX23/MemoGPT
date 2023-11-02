@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from model.user_model import Audio, Summary
 from database.db import get_db
 import json
@@ -15,6 +15,9 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 from services.tokenizer_services import tokenizer
 from services.llama_services import reply
 
+from schema.users_shema import user
+import oauth
+
 
 YOUR_API_TOKEN = config("AssemblyAI")
 
@@ -24,9 +27,9 @@ Audio_video = None
 
 #Create transcript:
 
-def get_transcript(file, db: Session = Depends(get_db)):
+def get_transcript(file, db: Session = Depends(get_db), current_user: user = Depends(oauth.get_current_user)):
 
-    try:
+    #try:
 
         base_url = "https://api.assemblyai.com/v2"
 
@@ -90,8 +93,8 @@ def get_transcript(file, db: Session = Depends(get_db)):
 
             else: time.sleep(3)  
 
-    finally:
-   
+    #finally:
+    
         print(f"TRANSCRIPT_DATA: {extracted_data}") 
 
         transcripted.append(extracted_data)
@@ -127,8 +130,11 @@ def get_transcript(file, db: Session = Depends(get_db)):
             tittle, summary = reply(extracted_data, db)
         
         audio_id = db.query(func.max(Audio.id)).scalar()
+    
+        user_id = current_user.id
 
         Summarized = Summary(
+            User_id = user_id,
             Audio_id = audio_id,
             title = tittle,
             summary = summary

@@ -15,15 +15,19 @@ from services.tokenizer_services import tokenizer
 from services.llama_services import conversations
 
 
+from schema.users_shema import user
+import oauth
+
+
 nltk.download('punkt')
 
 transcripted = []
 Audio_video = None
 
-
+"""
 #Store conversation history:
 
-def storing_history(history, db: Session = Depends(get_db)):
+def storing_history(history, db: Session = Depends(get_db), current_user: user = Depends(oauth.get_current_user)):
     
     class SetEncoder(json.JSONEncoder):
         def default(self, obj):
@@ -38,8 +42,11 @@ def storing_history(history, db: Session = Depends(get_db)):
 
     record = db.query(History).filter(History.Audio_id == number).first()
 
+    user_id = current_user.id
+
     if record is None:
         history_transcript = History(
+            User_id = user_id,
             Audio_id = number,
             chat_response = history_json
         )
@@ -55,16 +62,16 @@ def storing_history(history, db: Session = Depends(get_db)):
 
         return {'Audio_id': number,
                 'Conversation': record.chat_response}    
-
+"""
 
 
 #Continue Conversation:
 
-def continue_chat(Audio_id: int, input: str, db: Session= Depends(get_db)):
+def continue_chat(Audio_id: int, input: str, db: Session= Depends(get_db), current_user: user = Depends(oauth.get_current_user)):
 
     global Audio_video
 
-    record = db.query(History).filter(History.Audio_id == Audio_id).first()
+    record = db.query(History).filter(History.Audio_id == Audio_id, History.User_id == current_user.id).first()
 
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail= f"{Audio_id} does not exist" )
@@ -120,16 +127,23 @@ def continue_chat(Audio_id: int, input: str, db: Session= Depends(get_db)):
 
 #just send latest audio to 
 def Audio_numbering():
+    
+    global Audio_video
+
     Audio_number = Audio_video
+    print(f"AUDIO_TEST_RESPONSE_______________{Audio_video}")
+
     return Audio_number
 
 
 
 #Delete conversation:
 
-def delete_chat(Audio_id: int, db: Session= Depends(get_db)):
+def delete_chat(Audio_id: int, db: Session= Depends(get_db), current_user: user = Depends(oauth.get_current_user)):
 
-    record = db.query(Audio).filter(Audio.id == Audio_id).first()
+    record = db.query(History).filter(History.Audio_id == Audio_id, History.User_id == current_user.id).first()
+
+    #record = db.query(Audio).filter(Audio.id == Audio_id).first()
 
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail = f"{record} not found")
@@ -143,6 +157,12 @@ def delete_chat(Audio_id: int, db: Session= Depends(get_db)):
 
 #List of all chats
 
-def all_chats(db:Session= Depends(get_db)):
-    results = db.query(Summary.Audio_id, Summary.title).all()
+def all_chats(db:Session= Depends(get_db), current_user: user = Depends(oauth.get_current_user)):
+
+
+    #results = db.query(Summary.Audio_id, Summary.title).all(current_user)
+    results = db.query(Summary.Audio_id, Summary.title).filter(Summary.User_id == current_user.id).all()
+
+    #results = db.query(current_user.Audio_id, current_user.title).all()
+
     return results

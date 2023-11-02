@@ -12,6 +12,9 @@ from services.tokenizer_services import tokenizer
 from services.storage_services import storing_history
 
 
+from schema.users_shema import user
+import oauth
+
 llama = LlamaAPI(config('LlamaAPI'))
 
 nltk.download('punkt')
@@ -84,7 +87,7 @@ def reply(audio: str, db: Session = Depends(get_db)):
 #Conversation Endpoint:
 
 histories = {"message":[]}
-def conversation(input: str, db: Session = Depends(get_db)):
+def conversation(input: str, db: Session = Depends(get_db), current_user: user = Depends(oauth.get_current_user)):
     global histories, transcripted
 
     audio = transcripted
@@ -124,7 +127,7 @@ def conversation(input: str, db: Session = Depends(get_db)):
     else:
         llama2, history = conversations(input, audio, histories, db)
 
-    db_history = storing_history(history, db)
+    db_history = storing_history(history, db, current_user)
 
     return llama2, db_history
 
