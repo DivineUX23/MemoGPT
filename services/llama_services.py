@@ -135,7 +135,7 @@ def conversation(input: str, db: Session = Depends(get_db), current_user: user =
 
 def conversations(input: str, audio: str, messages: str, db: Session = Depends(get_db)):
 
-    prompt=f"""Based exclusively on the information within the transcript of an audio file delimited by triple backticks below, which contains sentence timestamps, speakers, and text, provide an answer to the question, provide an answer to the following question: {input}. Your response should be derived solely from the transcript. Include timestamps in the answer to reference where details are sourced from the Transcript.
+    prompt=f"""Based exclusively on the information within the transcript of an audio file delimited by triple backticks below, which contains sentence timestamps, speakers, and text, PROVIDE AN ANSWER TO THIS QUESTION: {input}. Your response should be derived solely from the transcript. Include timestamps in the answer to reference where details are sourced from the Transcript.
 
     Transcript: ```{audio}```"""
 
