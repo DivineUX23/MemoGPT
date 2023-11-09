@@ -32,18 +32,20 @@ def update(user: str, db: Session = Depends(get_db), current_user: user = Depend
     updating.email = user.email
     db.commit()
 
-    return "udated succefully"
+    return "updated succefully"
 
 
 def delete(db: Session = Depends(get_db), current_user: user = Depends(oauth.get_current_user)):
         
-    #deleting = db.query(User).filter(current_user.id == User.id)
+    deleting = db.query(User).filter(current_user.id == User.id)
 
-    #if not deleting:
-        #raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Hate to say but {id} does not exist")
-    #deleting.delete(sychronize_session = False)
-    #current_user.delete(sychronize_session = False)
-    db.delete(current_user)
+    if not deleting:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Hate to say but {id} does not exist")
+    deleting.delete(sychronize_session = False)
+    current_user.delete(sychronize_session = False)
+    
+    #db.delete(current_user)
+
     db.commit()
 
     return "Your account is deleted succefully"

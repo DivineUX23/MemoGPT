@@ -20,6 +20,12 @@ async def login(request: OAuth2PasswordRequestForm = Depends(), db: Session= Dep
     if not hash.verify(user.password, request.password):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Hate to say but your password is incorrect")
     
+
+    # Check if user's email is verified
+    if not User.is_verified:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email not verified")
+
+
     token = token_key.create_access_token(data={"sub": user.email})
     
     return {'access_token': token, 'token_type': 'bearer'}

@@ -21,6 +21,8 @@ from services.history_services import Audio_numbering
 from schema.users_shema import user
 import oauth
 
+from services.premium import check_audio_length
+
 
 #Recording audio:
 
@@ -88,8 +90,8 @@ def stop_recording(db: Session, current_user: user = Depends(oauth.get_current_u
             file=BytesIO(audio_data),
             filename=random_file_name_with_extension
         )
-            
-        transcription_result, summary_data = get_transcript(file, db, current_user)
+        
+        transcription_result, summary_data = check_audio_length(random_file_name_with_extension, file, db, current_user)
         
         #Debugger:
         print(f"TRANSCRIPT: {transcription_result}") 
@@ -150,8 +152,8 @@ async def upload_audio( db: Session, file: UploadFile = File(...), current_user:
         file=BytesIO(audio_data),
         filename=temp_file_path
     )
-        
-    transcription_result, summary_data = get_transcript(file, db, current_user)
+
+    transcription_result, summary_data = check_audio_length(temp_file_path, file, db, current_user)
 
     user_id = current_user.id
 
