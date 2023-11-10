@@ -29,9 +29,6 @@ async def pay(request: Request, amount: premium, db: Session = Depends(get_db), 
     user = db.query(User).filter(current_user.id == User.id).first()
 
 
-    print(f"{SECRET_KEY}")
-
-
     url = "https://api.paystack.co/transaction/initialize"
 
     payload = {
@@ -51,8 +48,14 @@ async def pay(request: Request, amount: premium, db: Session = Depends(get_db), 
 
         reference = data["data"]["reference"]
 
-        return {"status": "success", "auth_url": auth_url, "reference": reference} #suppose to be redirective: will implement with frontend
+        client = request.headers.get('accept')
 
+        if 'application/json' in client:
+            
+            return {"status": "redirect success", "auth_url": auth_url} #suppose to be redirective: will implement with frontend
+
+        else:
+            return RedirectResponse(auth_url)
     
     else:
         # Handle error case

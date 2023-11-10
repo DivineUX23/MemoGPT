@@ -18,8 +18,9 @@ class user(BaseModel):
     password: str
 
     class Config:
-        orm_mode = True
-        
+        #orm_mode = True
+        from_attributes = True
+
 class show_user(BaseModel):
     name: str
     email: str
@@ -46,7 +47,8 @@ class CreateUser(user):
     password: str
 
     class Config:
-        orm_mode = True
+        #orm_mode = True
+        from_attributes = True
 
     @root_validator(pre=True)
     @classmethod

@@ -29,7 +29,6 @@ async def sign_up(user: user, background_tasks: BackgroundTasks, db: Session = D
 
     new_users = services.user_services.sign_up(user=user, db=db)
 
-    #verification_token = hash.bcrypt(str(uuid4()))
     verification_token = str(uuid4())
     
     new_users.verification_token = verification_token
