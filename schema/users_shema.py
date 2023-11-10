@@ -12,13 +12,12 @@ class premium(int, Enum):
 
 
 class user(BaseModel):
-    #id: int
+
     name: str
     email: str
     password: str
 
     class Config:
-        #orm_mode = True
         from_attributes = True
 
 class show_user(BaseModel):
@@ -47,7 +46,7 @@ class CreateUser(user):
     password: str
 
     class Config:
-        #orm_mode = True
+
         from_attributes = True
 
     @root_validator(pre=True)
