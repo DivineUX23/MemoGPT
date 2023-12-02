@@ -5,3 +5,8 @@ main_testing.py
 prompts.py
 /__pycache__
 __pycache__/
+Spacefile
+venv
+virtual
+.space
+flagged

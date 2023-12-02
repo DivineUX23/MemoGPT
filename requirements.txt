@@ -2,9 +2,10 @@ fastapi==0.104.1
 fastapi_mail==1.4.1
 librosa==0.10.1
 llamaapi==0.1.36
-mysql_connector_repackaged==0.3.1
+mysql_connector_repackaged==0.3.1 #mysql-connector-python
 nltk==3.8.1
-passlib==1.7.4
+passlib==1.7.4 #passlib[bcrypt]
+#piwin
 PyAudio==0.2.13
 pydantic==2.4.2
 PyJWT==2.8.0
@@ -13,4 +14,5 @@ python-dotenv==1.0.0
 python_jose==3.3.0
 Requests==2.31.0
 SQLAlchemy==2.0.22
-starlette==0.32.0.post1
+starlette==0.27.0
+python-multipart

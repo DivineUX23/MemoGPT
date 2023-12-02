@@ -1,5 +1,7 @@
+import gradio as gr
+import uvicorn
 from sqlalchemy.orm import Session
-from fastapi import FastAPI, UploadFile, File, HTTPException,status, Depends
+from fastapi import FastAPI, UploadFile, File, HTTPException,status, Depends, Response
 from fastapi.responses import StreamingResponse
 from model.user_model import Audio, History, Summary
 from llamaapi import LlamaAPI
@@ -15,6 +17,16 @@ import threading
 import pyaudio
 import wave
 from decouple import config
+import mysql.connector
+from typing import Union
+
+from functools import partial
+
+#testing purposes only
+from sqlalchemy import create_engine
+from database.db import SessionLocal
+
+from pydub import AudioSegment
 
 import nltk
 from nltk.tokenize import sent_tokenize, word_tokenize
@@ -200,23 +212,46 @@ def reply(audio: str, db: Session = Depends(get_db)):
 #uplaod an audio file:
 
 @app.post("/upload_audio/")
-async def upload_audio(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_audio(file: Union[UploadFile, str] = File(...), db: Session = Depends(get_db)):
 
     global Audio_video
 
     allowed_extensions = {".mp3", ".wav"}
-    file_extension = os.path.splitext(file.filename)[1]
-    if file_extension.lower() not in allowed_extensions:
 
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, content={"error": "Invalid file format"})
+        # Check if the input is a string (URL) or a file
+    if isinstance(file, str):
+        print(f"THIS IS IT------{file}")
+
+        audio = AudioSegment.from_wav(file) 
+
+        if not os.path.exists("tmp"):
+            os.mkdir("tmp")
+
+        output_file_path = "tmp/mp3_file.mp3"
+
+        audio.export(output_file_path, format="mp3")
+
+        print(f"THIS------------{audio}")
+        
+        temp_file_path = output_file_path
+        #file_extension = os.path.splitext(file)[1]
     
-    if not os.path.exists("tmp"):
-        os.mkdir("tmp")
-  
-    temp_file_path = f"tmp/{file.filename}"
+    else:
+        
+        # It's a file, process as before
 
-    with open(temp_file_path, "wb") as f:
-        f.write(await file.read())
+        file_extension = os.path.splitext(file.filename)[1]
+        if file_extension.lower() not in allowed_extensions:
+
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, content={"error": "Invalid file format"})
+    
+        if not os.path.exists("tmp"):
+            os.mkdir("tmp")
+  
+        temp_file_path = f"tmp/{file.filename}"
+
+        with open(temp_file_path, "wb") as f:
+            f.write(await file.read())
     
     with open(temp_file_path, "rb") as f:
         audio_data = f.read()
@@ -628,3 +663,62 @@ def delete_chat(Audio_id: int, db: Session= Depends(get_db)):
 def all_chats(db:Session= Depends(get_db)):
     results = db.query(Summary.Audio_id, Summary.title).all()
     return [{'id': id, 'Title': title} for (id, title) in results]
+
+
+
+"""
+# Create Gradio interface
+iface = gr.Interface(
+    fn=conversations,
+    inputs=[gr.Textbox(lines=2, label="Ask a question")], 
+    outputs="text"
+)
+"""
+
+"""
+# Gradio chat interface db: Session = Depends(get_db)
+def wrapper_function(input, history, db: Session):
+    
+    result = conversation(input, db)  
+    return result['llama2']  
+
+
+db: Session = Depends(get_db)
+
+partial_wrapper_function = partial(wrapper_function, db)
+
+iface = gr.ChatInterface(partial_wrapper_function)
+
+"""
+
+
+def wrapper_function(input, history):
+    # manually create a new session
+    db = SessionLocal()
+
+    try:
+        result = conversation(input, db)
+        return result['llama2']
+    
+    finally:
+        db.close()
+
+
+
+iface = gr.ChatInterface(wrapper_function)
+
+
+@app.get("/demo")
+async def demo():
+
+    url = iface.launch()
+
+    # Redirect to the Gradio interface URL source venv/Scripts/activate. uvicorn mian_test:app --reload --port 6060
+    return Response(status_code=307, headers={"Location": url})
+
+
+if __name__ == "__main__":
+
+    app.mount("/demo", gr.App(iface))
+
+    uvicorn.run(app, host="localhost", port=6060)
