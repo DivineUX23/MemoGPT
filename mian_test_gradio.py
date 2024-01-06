@@ -1,8 +1,12 @@
 import gradio as gr
 from fastapi import Response
-from mian_test import conversation, upload_audio, conversations, all_chats
+from mian_test import conversation, upload_audio, conversations, all_chats, continue_chat, delete_chat
 from database.db import SessionLocal
-from werkzeug.datastructures import FileStorage
+#from werkzeug.datastructures import FileStorage
+
+#from llama import conversationing
+#from history import continue_chat
+
 
 
 """
@@ -42,12 +46,28 @@ demo.launch()
 
 #PUT THE UI in different pages JUst like this
 
+
+# global n=None
+n = None
+#upper function ---def continue_conversation(n): return n
+
+def continue_conversation(number): 
+
+    global n
+
+    n = number
+    
+    return n
+
+
 #WRAPPER FOR AUDIO
 async def wrapper_upload_audio(file_path):
 
     #with open(file_path, 'rb') as f:
         #audio_file = f.read()
         #audio_file = FileStorage(f)
+
+    # global n=None
 
     db = SessionLocal()
 
@@ -61,11 +81,24 @@ async def wrapper_upload_audio(file_path):
 #WRAPPER FOR CONVERSATION
 def wrapper_conversation(input, history):
 
+    global n
+
+
     db = SessionLocal()
 
     try:
-        result = conversation(input, db)
-        return result['llama2']
+
+        if n is not None:
+            print(f"Done{n}")
+            input="Provide a summary of our previous converation"
+            result = continue_chat(input, n, db)
+                        
+            return result['llama2']
+
+        else:
+
+            result = conversation(input, db)
+            return result['llama2']
     
     finally:
         db.close()
@@ -96,6 +129,21 @@ def display_chats():
 
 
 
+def wrapper_delete_chat(input):
+
+
+    db = SessionLocal()
+
+    try:
+
+        result = delete_chat(input, db)
+        return result
+    
+    finally:
+        db.close()
+
+
+
 #Audio Infsce for uplosd, record and play
 demo = gr.Blocks()
 
@@ -120,6 +168,21 @@ with demo:
     with gr.Tab("Flip Text"):
         #gr.Interface(fn=all_chats, inputs="text", output="text")
         gr.Interface(fn=display_chats, inputs=None, outputs=gr.HTML())
+
+        #audio_file = gr.Number(type="int")
+        audio_file = gr.Textbox(label="prompt 1")
+        b1 = gr.Button("input number")
+
+        b1.click(continue_conversation, inputs=audio_file, outputs=None)
+
+
+        #Deleting UI
+        audio_file = gr.Textbox(label="prompt 2")
+        b1 = gr.Button("input number")
+
+        b1.click(wrapper_delete_chat, inputs=audio_file, outputs=None)
+
+
 
 
 demo.launch(share=True)

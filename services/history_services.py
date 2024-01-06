@@ -33,6 +33,8 @@ def continue_chat(Audio_id: int, input: str, db: Session= Depends(get_db), curre
 
     record = db.query(History).filter(History.Audio_id == Audio_id, History.User_id == current_user.id).first()
 
+    #record = db.query(Summary).filter(Summary.Audio_id == Audio_id, Summary.User_id == current_user.id).first()
+
     if record is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail= f"{Audio_id} does not exist" )
     

@@ -4,6 +4,8 @@ from fastapi.responses import StreamingResponse
 
 from database.db import get_db
 
+from typing import Union
+
 import services.audio_services
 
 from schema.users_shema import user
@@ -39,6 +41,8 @@ async def stop_recording(db: Session = Depends(get_db), current_user: user = Dep
 #uplaod an audio file:
 
 @app.post("/audio")
+#async def upload_audio(file: Union[UploadFile, str] = File(...), db: Session = Depends(get_db), current_user: user = Depends(oauth.get_current_user)):
+
 async def upload_audio(file: UploadFile = File(...), db: Session = Depends(get_db), current_user: user = Depends(oauth.get_current_user)):
 
     transcription_result, summary_data = await services.audio_services.upload_audio(file=file, db=db, current_user=current_user)

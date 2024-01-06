@@ -46,7 +46,13 @@ async def sign_up(user: user, background_tasks: BackgroundTasks, db: Session = D
     )
 
     fm = FastMail(conf)
-    background_tasks.add_task(fm.send_message, message)
+
+    #either use background_task or await depends on the scale of project:
+    #corrently using await because of gradio interface:
+
+    #background_tasks.add_task(fm.send_message, message)
+    
+    await fm.send_message(message)
 
     return {'message': "User created successfully. Verification email sent.", 'detail': show_user.from_orm(new_users)}
 

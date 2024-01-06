@@ -25,6 +25,10 @@ SECRET_KEY = config("Paystack")
 @app.post("/pay")
 async def pay(request: Request, amount: premium, db: Session = Depends(get_db), current_user: user = Depends(oauth.get_current_user)):
 
+    print(f"This si right{type(amount)}")
+    
+    print(f"This si right{amount}")
+
 
     user = db.query(User).filter(current_user.id == User.id).first()
 
@@ -55,8 +59,9 @@ async def pay(request: Request, amount: premium, db: Session = Depends(get_db), 
             return {"status": "redirect success", "auth_url": auth_url} #suppose to be redirective: will implement with frontend
 
         else:
-            return RedirectResponse(auth_url)
-    
+            #return RedirectResponse(auth_url)
+            return auth_url
+
     else:
         # Handle error case
         return {"status": "Error", "message": response.text}

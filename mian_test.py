@@ -31,10 +31,16 @@ from pydub import AudioSegment
 import nltk
 from nltk.tokenize import sent_tokenize, word_tokenize
 
+from openai import OpenAI
+
 
 app = FastAPI()
 
 llama = LlamaAPI(config('LlamaAPI'))
+
+M_API = config('MistrailAPI')
+
+
 YOUR_API_TOKEN = config("AssemblyAI")
 
 nltk.download('punkt')
@@ -161,54 +167,109 @@ def stop_recording(db: Session = Depends(get_db)):
 
 def reply(audio: str, db: Session = Depends(get_db)):
 
-    # Create the summary
-    try:
-        api_request_json = {
-            "model": "llama-13b-chat",
-            "messages": [
-            {"role": "system", "content": f"""System: Based solely on this transcript: {audio} which contains sentence timestamps, speakers, and text, do the following:\
-            - Provide a short summary of the key points. Include timestamps in the summary to reference where details are derived from the transcript. Ensure the summary directly addresses the core topics discussed in the transcript.\
-            - Provide a single-phrase or single-word title that accurately captures the main theme or subject of the transcript.\
+        # gets API Key from environment variable OPENAI_API_KEY
+        client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=M_API,
+        )
 
-            User: Provide your answer in JSON format with the following keys: title, summary.\
+        completion = client.chat.completions.create(
+            extra_headers={
+                #"HTTP-Referer": $YOUR_SITE_URL, # Optional, for including your app on openrouter.ai rankings.
+                #"X-Title": $YOUR_APP_NAME, # Optional. Shows in rankings on openrouter.ai.
+            },
+                
+            model="mistralai/mistral-7b-instruct",
+            messages=[
+                    {"role": "system", "content": f"""System: Based solely on this transcript: {audio} which contains sentence timestamps, speakers, and text, do the following:\
+                    - Provide a short summary of the key points. Include timestamps in the summary to reference where details are derived from the transcript. Ensure the summary directly addresses the core topics discussed in the transcript.\
+                    - Provide a single-phrase or single-word title that accurately captures the main theme or subject of the transcript.\
 
-            System: If the transcript is empty then simply write "No transcript provided."\
+                    User: Provide your answer in JSON format with the following keys: title, summary.\
 
-            Example 1:
-            Transcript: "Hi, this is John from XYZ company. I'm calling to follow up on your order of 100 widgets. We have shipped your order today and you should receive it by next week. Please let me know if you have any questions or concerns."\
-            "title": "Order Confirmation", \n\n\
-            "summary": "John from XYZ company called to follow up on an order of 100 widgets. (0-10)\n The order was shipped today and expected to arrive by next week. (11-19)"\
-            """}
+                    System: If the transcript is empty then simply write "No transcript provided."\
+
+                    Example 1:
+                    Transcript: "Hi, this is John from XYZ company. I'm calling to follow up on your order of 100 widgets. We have shipped your order today and you should receive it by next week. Please let me know if you have any questions or concerns."\
+                    "title": "Order Confirmation", \n\n\
+                    "summary": "John from XYZ company called to follow up on an order of 100 widgets. (0-10)\n The order was shipped today and expected to arrive by next week. (11-19)"\
+                    """},
             ],
 
-            "temperature": 0,
-        }
+            #temperature: 0,
+
+        )
+
+        response = completion.choices[0].message.content
+        responsing = completion
+
+
+        print(response)
+        print(responsing)
+
+        #lines = response
+
+        content = json.loads(response)
+
+        title = content["title"]
+        summary = content["summary"]
+
+        print(f"Title: {title}")
+        print(f"Summary: {summary}")
+
+        return (title, summary)
+
+
+
+"""
+        Create the summary
+        try:
+            api_request_json = {
+                "model": "llama-13b-chat",
+                "messages": [
+                {"role": "system", "content": f""System: Based solely on this transcript: {audio} which contains sentence timestamps, speakers, and text, do the following:\
+                - Provide a short summary of the key points. Include timestamps in the summary to reference where details are derived from the transcript. Ensure the summary directly addresses the core topics discussed in the transcript.\
+                - Provide a single-phrase or single-word title that accurately captures the main theme or subject of the transcript.\
+
+                User: Provide your answer in JSON format with the following keys: title, summary.\
+
+                System: If the transcript is empty then simply write "No transcript provided."\
+
+                Example 1:
+                Transcript: "Hi, this is John from XYZ company. I'm calling to follow up on your order of 100 widgets. We have shipped your order today and you should receive it by next week. Please let me know if you have any questions or concerns."\
+                "title": "Order Confirmation", \n\n\
+                "summary": "John from XYZ company called to follow up on an order of 100 widgets. (0-10)\n The order was shipped today and expected to arrive by next week. (11-19)"\
+                ""}
+                ],
+
+                "temperature": 0,
+            }
+            
+        except llama.exceptions.Error as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"llama-13b-chat failed: {str(e)}")    
+
+        response = llama.run(api_request_json)
         
-    except llama.exceptions.Error as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"llama-13b-chat failed: {str(e)}")    
+        print(json.dumps(response.json(), indent=2))
+            
+        response_data = response.json()
 
-    response = llama.run(api_request_json)
-    
-    print(json.dumps(response.json(), indent=2))
-        
-    response_data = response.json()
+        content = response_data["choices"][0]["message"]["content"]
 
-    content = response_data["choices"][0]["message"]["content"]
+        lines = content.split("\n\n")
 
-    lines = content.split("\n\n")
+        title_line = next((line for line in lines if line.lower().startswith("title:")), None)
+        summary_line = next((line for line in lines if line.lower().startswith("summary:")), None)
 
-    title_line = next((line for line in lines if line.lower().startswith("title:")), None)
-    summary_line = next((line for line in lines if line.lower().startswith("summary:")), None)
+        # Extract the title and summary from these lines
+        title = title_line.split(":")[1].strip() if title_line else None
+        summary = summary_line.split(":")[1].strip() if summary_line else None
 
-    # Extract the title and summary from these lines
-    title = title_line.split(":")[1].strip() if title_line else None
-    summary = summary_line.split(":")[1].strip() if summary_line else None
+        print(f"Title: {title}")
+        print(f"Summary: {summary}")
 
-    print(f"Title: {title}")
-    print(f"Summary: {summary}")
-
-    return (title, summary)
-
+        return (title, summary)
+"""
 #uplaod an audio file:
 
 @app.post("/upload_audio/")
@@ -520,6 +581,8 @@ def conversations(input: str, audio: str, messages: str, db: Session = Depends(g
 
 
     if input:
+        
+        """
         api_request_json = {
             "model": "llama-13b-chat",
             "messages": message,
@@ -532,6 +595,31 @@ def conversations(input: str, audio: str, messages: str, db: Session = Depends(g
         response_data = response.json()
         llama2 = response_data['choices'][0]['message']['content']
         messages["message"].append({"role": "assistant", "content": llama2})
+        """
+
+
+        # gets API Key from environment variable OPENAI_API_KEY
+        client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=M_API,
+        )
+
+        completion = client.chat.completions.create(
+            extra_headers={
+                #"HTTP-Referer": $YOUR_SITE_URL, # Optional, for including your app on openrouter.ai rankings.
+                #"X-Title": $YOUR_APP_NAME, # Optional. Shows in rankings on openrouter.ai.
+            },
+                
+            model="mistralai/mistral-7b-instruct",
+            messages=message,
+
+            #temperature: 0,
+
+        )
+
+        mistral = completion.choices[0].message.content
+
+        llama2 = mistral
 
         return llama2, messages
     

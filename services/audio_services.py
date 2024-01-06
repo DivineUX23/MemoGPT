@@ -14,6 +14,8 @@ import pyaudio
 import wave
 from decouple import config
 
+from pydub import AudioSegment
+from typing import Union
 
 from services.assemblyai_services import get_transcript
 from services.history_services import Audio_numbering
@@ -126,25 +128,50 @@ def stop_recording(db: Session, current_user: user = Depends(oauth.get_current_u
 
 
 #uplaod an audio file:
+#async def upload_audio(file: Union[UploadFile, str] = File(...), db: Session = Depends(get_db), current_user: user = Depends(oauth.get_current_user)):
+async def upload_audio(file: Union[UploadFile, str] = File(...), db: Session = Depends(get_db), current_user: user = Depends(oauth.get_current_user)):
 
-async def upload_audio( db: Session, file: UploadFile = File(...), current_user: user = Depends(oauth.get_current_user)):
+#async def upload_audio( db: Session, file: UploadFile = File(...), current_user: user = Depends(oauth.get_current_user)):
 
     global Audio_video
 
     allowed_extensions = {".mp3", ".wav"}
-    file_extension = os.path.splitext(file.filename)[1]
-    if file_extension.lower() not in allowed_extensions:
 
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, content={"error": "Invalid file format"})
-    
-    if not os.path.exists("tmp"):
-        os.mkdir("tmp")
-  
-    temp_file_path = f"tmp/{file.filename}"
+    # Check if the input is a string (URL) or a file
+    if isinstance(file, str):
+        print(f"THIS IS IT------{file}")
 
-    with open(temp_file_path, "wb") as f:
-        f.write(await file.read())
+        audio = AudioSegment.from_wav(file) 
+
+        if not os.path.exists("tmp"):
+            os.mkdir("tmp")
+
+        output_file_path = "tmp/mp3_file.mp3"
+
+        audio.export(output_file_path, format="mp3")
+
+        print(f"THIS------------{audio}")
+        
+        temp_file_path = output_file_path
+        #file_extension = os.path.splitext(file)[1]
     
+    else:
+        
+        # It's a file, process as before
+
+        file_extension = os.path.splitext(file.filename)[1]
+        if file_extension.lower() not in allowed_extensions:
+
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, content={"error": "Invalid file format"})
+        
+        if not os.path.exists("tmp"):
+            os.mkdir("tmp")
+    
+        temp_file_path = f"tmp/{file.filename}"
+
+        with open(temp_file_path, "wb") as f:
+            f.write(await file.read())
+        
     with open(temp_file_path, "rb") as f:
         audio_data = f.read()
 

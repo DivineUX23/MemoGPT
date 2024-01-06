@@ -41,10 +41,7 @@ def delete(db: Session = Depends(get_db), current_user: user = Depends(oauth.get
 
     if not deleting:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Hate to say but {id} does not exist")
-    deleting.delete(sychronize_session = False)
-    current_user.delete(sychronize_session = False)
-    
-    #db.delete(current_user)
+    deleting.delete(synchronize_session = False)
 
     db.commit()
 

@@ -153,7 +153,7 @@ def conversations(input: str, audio: str, messages: str, db: Session = Depends(g
 
     if input:
         api_request_json = {
-            "model": "llama-13b-chat",
+            "model": "llama-70b-chat",
             "messages": message,
             "temperature": 0.3
 

@@ -8,5 +8,6 @@ __pycache__/
 Spacefile
 venv
 virtual
+myenv
 .space
 flagged
