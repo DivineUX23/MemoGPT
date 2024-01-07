@@ -1,3 +1,6 @@
+#TEST CODE FOR THE MAIN GRADIO UI CODE IN THE MAIN_GRADIO.PY FILE
+
+
 import gradio as gr
 from fastapi import Response
 from mian_test import conversation, upload_audio, conversations, all_chats, continue_chat, delete_chat
@@ -6,43 +9,6 @@ from database.db import SessionLocal
 
 #from llama import conversationing
 #from history import continue_chat
-
-
-
-"""
-from transformers import pipeline
-
-import gradio as gr
-
-asr = pipeline("automatic-speech-recognition", "facebook/wav2vec2-base-960h")
-classifier = pipeline("text-classification")
-
-
-def speech_to_text(speech):
-    text = asr(speech)["text"]
-    return text
-
-
-def text_to_sentiment(text):
-    return classifier(text)[0]["label"]
-
-
-demo = gr.Blocks()
-
-with demo:
-    audio_file = gr.Audio(type="filepath")
-    text = gr.Textbox()
-    label = gr.Label()
-
-    b1 = gr.Button("Recognize Speech")
-    b2 = gr.Button("Classify Sentiment")
-
-    b1.click(speech_to_text, inputs=audio_file, outputs=text)
-    b2.click(text_to_sentiment, inputs=text, outputs=label)
-
-demo.launch()
-"""
- 
 
 #PUT THE UI in different pages JUst like this
 
@@ -221,4 +187,3 @@ with demo:
 
 demo.launch()
 """
-

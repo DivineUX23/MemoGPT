@@ -1,3 +1,6 @@
+#TEST CODE FOR THE MAIN CODE IN THE MAIN.PY FILE
+
+
 import gradio as gr
 import uvicorn
 from sqlalchemy.orm import Session
@@ -753,31 +756,6 @@ def all_chats(db:Session= Depends(get_db)):
     return [{'id': id, 'Title': title} for (id, title) in results]
 
 
-
-"""
-# Create Gradio interface
-iface = gr.Interface(
-    fn=conversations,
-    inputs=[gr.Textbox(lines=2, label="Ask a question")], 
-    outputs="text"
-)
-"""
-
-"""
-# Gradio chat interface db: Session = Depends(get_db)
-def wrapper_function(input, history, db: Session):
-    
-    result = conversation(input, db)  
-    return result['llama2']  
-
-
-db: Session = Depends(get_db)
-
-partial_wrapper_function = partial(wrapper_function, db)
-
-iface = gr.ChatInterface(partial_wrapper_function)
-
-"""
 
 
 def wrapper_function(input, history):
