@@ -1,33 +1,49 @@
-# Meeting Assistant
+# Memo-GPT
 
-"Meeting Assistant is an advanced AI-powered application designed to enhance your meeting experiences. It offers features such as audio recording, audio file uploading, transcript generation, and summarization. Additionally, it enables querying and provides responses based on the meeting content, complete with timestamps. This tool aims to increase efficiency and elevate the outcomes of your meetings."
+A complete Software As a Service application that helps users take notes during meetings, providing summaries of recorded or uploaded audio, chat about the meeting or audio with a GPT-based AI and query the AI for specific answers within the audio without the necessity of listening to the entire audio.
+
+
+
+
+#### This SAS application effectively eliminates the need for manual note-taking during meetings, lectures, and conversations, as it autonomously does it for you with intelligence.
+
+
+-----
+
+Memo-GPT is an advanced AI-powered application designed to enhance your meeting experiences. It offers audio recording, audio file uploading, transcript generation, and summarization. Additionally, it enables querying/chatting and provides responses based on the meeting content, complete with timestamps and speaker diarization. This tool aims to increase efficiency and elevate the outcomes of your meetings.
+
 
 ## Features
 
 - Audio recording
-  - Start and stop recording through the API
+  - Start and stop recording
 - Audio file uploading 
 - Speech transcription using AssemblyAI API
-- Text summarization using the Anthropic LLama API
-- Conversational question answering using the transcript and LLama API
+- Text summarization using the Meta's LLama-2 API
+- Conversational question answering based on the transcript using Meta's LLama-2 70b API
 - User account management and authentication
 - Email verification on signup 
 - Premium subscriptions
   - Limits on transcription length for free accounts
   - Unlimited transcription for paid accounts
 - Payment processing with Paystack
+  
+- FRONTEND with Gradio
+
 
 ## Technologies
 
 - Python
 - FastAPI
-- PostgreSQL
+- MySQL
 - SQLAlchemy
 - JWT Authentication
 - OAuth2 Password Flow
 - AssemblyAI API
 - LLama API
 - Paystack API
+- Gradio
+- ffmpeg
 
 
 ## Folder Structure
@@ -60,6 +76,7 @@
 ├── history.py 
 ├── llama.py
 ├── main.py
+├── main_gradio.py
 ├── oauth.py
 ├── paystack.py
 ├── prompts.py
@@ -123,7 +140,13 @@ The API endpoints are organized by HTTP method below:
 
 - DELETE /delete_chat/{id} - Delete chat
 
-  
+
+
+## Gradio UI
+
+This project incorporates a Gradio user interface for demonstration and testing purposes. The objective is to facilitate comprehension of the project for non-technical individuals, without the necessity of interacting with the API endpoints.
+
+
 ## Premium Accounts
 
 To access transcripts over 5 minutes users need a premium account. This is handled via:
@@ -164,14 +187,22 @@ Copy the `.env.example` file to `.env` and fill in values for:
 alembic upgrade head
 ```
 
-5. Run the server
+5. Run Gradio frontend
+
+```
+python main_gradio.py
+```
+
+6. Run the server API
 
 ```
 uvicorn main:app
 ```
 
-The API will be available at http://localhost:8000
 
+The Gradio UI will be available at http://127.0.0.1:7860
+
+The API will be available at http://localhost:8000
 
 ## Contributing
 
