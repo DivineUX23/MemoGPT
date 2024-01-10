@@ -12,7 +12,7 @@ A complete Software As a Service application that helps users take notes during 
 
 ## VIDEO DEMO
 
-This video demonstration emphasizes the essential features of the app using the Gradio interface. Feel free to skip to 3:10 for the main section.
+This video demonstration emphasizes the essential features of the app using the Gradio interface. If you prefer to skip the recording process and go straight to the AI demo, feel free to jump to 3:10.
 
 
 https://github.com/DivineUX23/MemoGPT/assets/96517814/13ed8f3f-b522-41f4-843f-0838f82b34d7
