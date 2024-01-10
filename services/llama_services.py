@@ -35,7 +35,7 @@ def reply(audio: str, db: Session = Depends(get_db)):
     # Create the summary
     try:
         api_request_json = {
-            "model": "llama-13b-chat",
+            "model": "llama-70b-chat",
             "messages": [
             {"role": "system", "content": f"""System: Based solely on this transcript: {audio} which contains sentence timestamps, speakers, and text, do the following:\
             - Provide a short summary of the key points. Include timestamps in the summary to reference where details are derived from the transcript. Ensure the summary directly addresses the core topics discussed in the transcript.\

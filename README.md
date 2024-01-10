@@ -1,3 +1,9 @@
+---
+title: api
+app_file: main_gradio.py
+sdk: gradio
+sdk_version: 4.12.0
+---
 # Memo-GPT
 
 A complete Software As a Service application that helps users take notes during meetings, providing summaries of recorded or uploaded audio, chat about the meeting or audio with a GPT-based AI and query the AI for specific answers within the audio without the necessity of listening to the entire audio.
